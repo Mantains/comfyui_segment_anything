@@ -15,6 +15,7 @@ import folder_paths
 import comfy.model_management
 from sam_hq.predictor import SamPredictorHQ
 from sam_hq.build_sam_hq import sam_model_registry
+from sam_hq.automatic import SamAutomaticMaskGeneratorHQ
 from local_groundingdino.datasets import transforms as T
 from local_groundingdino.util.utils import clean_state_dict as local_groundingdino_clean_state_dict
 from local_groundingdino.util.slconfig import SLConfig as local_groundingdino_SLConfig
@@ -285,6 +286,35 @@ class GroundingDinoModelLoader:
     def main(self, model_name):
         dino_model = load_groundingdino_model(model_name)
         return (dino_model, )
+
+class SAMAutomaticMask:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "sam_model": ('SAM_MODEL', {}),
+                "image": ('IMAGE', {}),
+            }
+        }
+    CATEGORY = "segment_anything"
+    FUNCTION = "main"
+    RETURN_TYPES = ("IMAGE", "MASK")
+
+    def main(self, sam_model, image):
+        
+        image = tensor2sam(image)
+        sam_is_hq = False
+        # TODO: more elegant
+        if hasattr(sam_model, 'model_name') and 'hq' in sam_model.model_name:
+            sam_is_hq = True
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        sam_model.to(device=device)
+
+        mask_generator = SamAutomaticMaskGeneratorHQ(sam_model, sam_is_hq)
+        masks = mask_generator.generate_masks(image)
+
+        return (create_tensor_output(image, masks, None))
 
 
 class GroundingDinoSAMSegment:
