@@ -287,7 +287,7 @@ class GroundingDinoModelLoader:
         dino_model = load_groundingdino_model(model_name)
         return (dino_model, )
 
-class SAMAutomaticMask:
+class SamAutomaticMask:
     @classmethod
     def INPUT_TYPES(cls):
         return {
